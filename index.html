@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Chess</title>
+    <style>
+        #board {
+            display: grid;
+            grid-template-columns: repeat(9, 60px);
+            grid-template-rows: repeat(10, 60px);
+            gap: 1px;
+            background-color: #e0c68b;
+            border: 2px solid #8b4513;
+            position: relative;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            position: relative;
+        }
+        .cell::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 1px;
+            background-color: #8b4513;
+            transform: translate(-50%, -50%);
+        }
+        .cell::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            background-color: #8b4513;
+            transform: translate(-50%, -50%);
+        }
+        .cell[data-col="0"]::before,
+        .cell[data-col="8"]::before {
+            width: 50%;
+            left: 75%;
+        }
+        .cell[data-row="0"]::after,
+        .cell[data-row="9"]::after {
+            height: 50%;
+            top: 75%;
+        }
+        .cell[data-row="4"]::after,
+        .cell[data-row="5"]::after {
+            display: none;
+        }
+        .river {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: #a0d8ef;
+            transform: translateY(-50%);
+            z-index: -1;
+        }
+        .diagonal-line::before {
+            content: '';
+            position: absolute;
+            width: 84px;
+            height: 1px;
+            background-color: #8b4513;
+            transform-origin: top left;
+        }
+        .diagonal-line.top-left::before {
+            transform: rotate(45deg);
+        }
+        .diagonal-line.top-right::before {
+            transform: rotate(-45deg);
+            left: 100%;
+        }
+        .diagonal-line.bottom-left::before {
+            transform: rotate(-45deg);
+            top: 100%;
+        }
+        .diagonal-line.bottom-right::before {
+            transform: rotate(45deg);
+            left: 100%;
+            top: 100%;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+       
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            position: relative;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(9, 60px);
+            grid-template-rows: repeat(10, 60px);
+            gap: 1px;
+            background-color: #deb887;
+            border: 2px solid #8b4513;
+        }
+        .piece {
+            z-index: 1;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+        .piece:hover {
+            transform: translateY(-3px);
+        }
+        .red {
+            background-color: #ff6b6b;
+            color: #fff;
+        }
+        .black {
+            background-color: #4a4a4a;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="board"></div>
+
+    <script>
+        const board = document.getElementById('board');
+        let selectedPiece = null;
+        const pieces = {
+            'r': '車', 'h': '馬', 'e': '象', 'a': '士', 'k': '將', 'c': '砲', 'p': '卒',
+            'R': '車', 'H': '馬', 'E': '相', 'A': '仕', 'K': '帥', 'C': '炮', 'P': '兵'
+        };
+        const initialBoard = [
+            'rheakaehr',
+            '         ',
+            ' c     c ',
+            'p p p p p',
+            '         ',
+            '         ',
+            'P P P P P',
+            ' C     C ',
+            '         ',
+            'RHEAKAEHR'
+        ];
+
+        function createBoard() {
+            for (let row = 0; row < 10; row++) {
+                for (let col = 0; col < 9; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.addEventListener('click', handleCellClick);
+                    board.appendChild(cell);
+
+                    const piece = initialBoard[row][col];
+                    if (piece !== ' ') {
+                        createPiece(piece, cell);
+                    }
+                }
+            }
+        }
+
+        function createPiece(piece, cell) {
+            const pieceElement = document.createElement('div');
+            pieceElement.className = `piece ${piece.toLowerCase() === piece ? 'black' : 'red'}`;
+            pieceElement.textContent = pieces[piece];
+            pieceElement.dataset.piece = piece;
+            cell.appendChild(pieceElement);
+        }
+
+        function handleCellClick(event) {
+            const cell = event.target.closest('.cell');
+            const piece = cell.querySelector('.piece');
+
+            if (selectedPiece) {
+                if (isValidMove(selectedPiece, cell)) {
+                    movePiece(selectedPiece, cell);
+                }
+                selectedPiece.classList.remove('selected');
+                selectedPiece = null;
+            } else if (piece) {
+                selectedPiece = piece;
+                piece.classList.add('selected');
+            }
+        }
+
+        function isValidMove(piece, targetCell) {
+            // Implement Chinese chess rules here
+            // This is a simplified version and doesn't cover all rules
+            const fromRow = parseInt(piece.parentElement.dataset.row);
+            const fromCol = parseInt(piece.parentElement.dataset.col);
+            const toRow = parseInt(targetCell.dataset.row);
+            const toCol = parseInt(targetCell.dataset.col);
+
+            const pieceType = piece.dataset.piece.toLowerCase();
+            const isRed = piece.classList.contains('red');
+
+            switch (pieceType) {
+                case 'p':
+                    if (isRed) {
+                        return toRow === fromRow - 1 && toCol === fromCol;
+                    } else {
+                        return toRow === fromRow + 1 && toCol === fromCol;
+                    }
+                case 'r':
+                    return fromRow === toRow || fromCol === toCol;
+                case 'h':
+                    return (Math.abs(fromRow - toRow) === 2 && Math.abs(fromCol - toCol) === 1) ||
+                           (Math.abs(fromRow - toRow) === 1 && Math.abs(fromCol - toCol) === 2);
+                // Add more rules for other piece types
+            }
+
+            return true; // Allow all moves for now
+        }
+
+        function movePiece(piece, targetCell) {
+            const targetPiece = targetCell.querySelector('.piece');
+            if (targetPiece) {
+                targetCell.removeChild(targetPiece);
+            }
+            targetCell.appendChild(piece);
+        }
+
+        createBoard();
+    </script>
+</body>
+</html>
