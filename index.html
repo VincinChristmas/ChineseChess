@@ -1,252 +1,323 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chinese Chess</title>
+    <title>Chinese Chess (Xiangqi)</title>
     <style>
-        #board {
+        .board {
+            background: #DEB887;
+            padding: 20px;
+            display: inline-block;
+        }
+        
+        .board-grid {
             display: grid;
             grid-template-columns: repeat(9, 60px);
             grid-template-rows: repeat(10, 60px);
-            gap: 1px;
-            background-color: #e0c68b;
-            border: 2px solid #8b4513;
-            position: relative;
+            gap: 0px;
+            border: 2px solid #000;
         }
+        
         .cell {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            cursor: pointer;
+            border: 1px solid #000;
             position: relative;
-        }
-        .cell::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 100%;
-            height: 1px;
-            background-color: #8b4513;
-            transform: translate(-50%, -50%);
-        }
-        .cell::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 1px;
-            height: 100%;
-            background-color: #8b4513;
-            transform: translate(-50%, -50%);
-        }
-        .cell[data-col="0"]::before,
-        .cell[data-col="8"]::before {
-            width: 50%;
-            left: 75%;
-        }
-        .cell[data-row="0"]::after,
-        .cell[data-row="9"]::after {
-            height: 50%;
-            top: 75%;
-        }
-        .cell[data-row="4"]::after,
-        .cell[data-row="5"]::after {
-            display: none;
-        }
-        .river {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 100%;
-            height: 60px;
-            background-color: #a0d8ef;
-            transform: translateY(-50%);
-            z-index: -1;
-        }
-        .diagonal-line::before {
-            content: '';
-            position: absolute;
-            width: 84px;
-            height: 1px;
-            background-color: #8b4513;
-            transform-origin: top left;
-        }
-        .diagonal-line.top-left::before {
-            transform: rotate(45deg);
-        }
-        .diagonal-line.top-right::before {
-            transform: rotate(-45deg);
-            left: 100%;
-        }
-        .diagonal-line.bottom-left::before {
-            transform: rotate(-45deg);
-            top: 100%;
-        }
-        .diagonal-line.bottom-right::before {
-            transform: rotate(45deg);
-            left: 100%;
-            top: 100%;
-        }
-        body {
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-       
-        .cell {
-            width: 60px;
-            height: 60px;
-            display: flex;
             justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            cursor: pointer;
-            position: relative;
         }
-        #board {
-            display: grid;
-            grid-template-columns: repeat(9, 60px);
-            grid-template-rows: repeat(10, 60px);
-            gap: 1px;
-            background-color: #deb887;
-            border: 2px solid #8b4513;
-        }
+        
         .piece {
-            z-index: 1;
             width: 50px;
             height: 50px;
             border-radius: 50%;
+            border: 2px solid #000;
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
             font-weight: bold;
-            box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s;
+            position: absolute;
+            background: #fff;
+            user-select: none;
         }
-        .piece:hover {
-            transform: translateY(-3px);
+        
+        .red-piece {
+            color: red;
+            background: #FFE4E1;
         }
-        .red {
-            background-color: #ff6b6b;
-            color: #fff;
+        
+        .black-piece {
+            color: black;
+            background: #E6E6FA;
         }
-        .black {
-            background-color: #4a4a4a;
-            color: #fff;
+        
+        .selected {
+            background: #90EE90;
+        }
+        
+        .valid-move {
+            background: rgba(144, 238, 144, 0.5);
+        }
+
+        .river {
+            grid-column: 1 / -1;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #4169E1;
+            background: #F0F8FF;
+        }
+
+        .status {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div id="board"></div>
+    <div class="board">
+        <div class="board-grid" id="board"></div>
+        <div class="status" id="status">Red's Turn</div>
+    </div>
 
     <script>
-        const board = document.getElementById('board');
-        let selectedPiece = null;
-        const pieces = {
-            'r': '車', 'h': '馬', 'e': '象', 'a': '士', 'k': '將', 'c': '砲', 'p': '卒',
-            'R': '車', 'H': '馬', 'E': '相', 'A': '仕', 'K': '帥', 'C': '炮', 'P': '兵'
-        };
-        const initialBoard = [
-            'rheakaehr',
-            '         ',
-            ' c     c ',
-            'p p p p p',
-            '         ',
-            '         ',
-            'P P P P P',
-            ' C     C ',
-            '         ',
-            'RHEAKAEHR'
-        ];
+        class ChineseChess {
+            constructor() {
+                this.board = Array(10).fill().map(() => Array(9).fill(null));
+                this.currentPlayer = 'red';
+                this.selectedPiece = null;
+                this.initializeBoard();
+                this.renderBoard();
+            }
 
-        function createBoard() {
-            for (let row = 0; row < 10; row++) {
-                for (let col = 0; col < 9; col++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.dataset.row = row;
-                    cell.dataset.col = col;
-                    cell.addEventListener('click', handleCellClick);
-                    board.appendChild(cell);
+            initializeBoard() {
+                // Initialize pieces for both sides
+                const initialSetup = {
+                    'red': {
+                        '車': [[9,0], [9,8]],
+                        '馬': [[9,1], [9,7]],
+                        '相': [[9,2], [9,6]],
+                        '仕': [[9,3], [9,5]],
+                        '帥': [[9,4]],
+                        '炮': [[7,1], [7,7]],
+                        '兵': [[6,0], [6,2], [6,4], [6,6], [6,8]]
+                    },
+                    'black': {
+                        '車': [[0,0], [0,8]],
+                        '馬': [[0,1], [0,7]],
+                        '象': [[0,2], [0,6]],
+                        '士': [[0,3], [0,5]],
+                        '將': [[0,4]],
+                        '炮': [[2,1], [2,7]],
+                        '卒': [[3,0], [3,2], [3,4], [3,6], [3,8]]
+                    }
+                };
 
-                    const piece = initialBoard[row][col];
-                    if (piece !== ' ') {
-                        createPiece(piece, cell);
+                for (let color in initialSetup) {
+                    for (let piece in initialSetup[color]) {
+                        initialSetup[color][piece].forEach(([row, col]) => {
+                            this.board[row][col] = {
+                                type: piece,
+                                color: color
+                            };
+                        });
+                    }
+                }
+            }
+
+            renderBoard() {
+                const boardElement = document.getElementById('board');
+                boardElement.innerHTML = '';
+
+                for (let row = 0; row < 10; row++) {
+                    for (let col = 0; col < 9; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        
+                        const piece = this.board[row][col];
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `piece ${piece.color}-piece`;
+                            pieceElement.textContent = piece.type;
+                            pieceElement.dataset.row = row;
+                            pieceElement.dataset.col = col;
+                            
+                            pieceElement.onclick = (e) => this.handlePieceClick(row, col, e);
+                            cell.appendChild(pieceElement);
+                        } else {
+                            cell.onclick = () => this.handleCellClick(row, col);
+                        }
+                        
+                        boardElement.appendChild(cell);
+                    }
+                }
+
+                document.getElementById('status').textContent = 
+                    `${this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1)}'s Turn`;
+            }
+
+            handlePieceClick(row, col, event) {
+                const piece = this.board[row][col];
+                
+                // Clear previous selection
+                document.querySelectorAll('.piece').forEach(p => p.classList.remove('selected'));
+                document.querySelectorAll('.cell').forEach(c => c.classList.remove('valid-move'));
+                
+                // If clicking own piece
+                if (piece.color === this.currentPlayer) {
+                    this.selectedPiece = { row, col };
+                    event.target.classList.add('selected');
+                    this.showValidMoves(row, col);
+                }
+                // If clicking opponent's piece with a selected piece
+                else if (this.selectedPiece) {
+                    this.tryMove(row, col);
+                }
+            }
+
+            handleCellClick(row, col) {
+                if (this.selectedPiece) {
+                    this.tryMove(row, col);
+                }
+            }
+
+            tryMove(toRow, toCol) {
+                if (this.selectedPiece) {
+                    const { row: fromRow, col: fromCol } = this.selectedPiece;
+                    const piece = this.board[fromRow][fromCol];
+                    
+                    if (this.isValidMove(fromRow, fromCol, toRow, toCol)) {
+                        // Make the move
+                        this.board[toRow][toCol] = piece;
+                        this.board[fromRow][fromCol] = null;
+                        
+                        // Switch turns
+                        this.currentPlayer = this.currentPlayer === 'red' ? 'black' : 'red';
+                        this.selectedPiece = null;
+                        
+                        // Re-render the board
+                        this.renderBoard();
+                    }
+                }
+            }
+
+            isValidMove(fromRow, fromCol, toRow, toCol) {
+                const piece = this.board[fromRow][fromCol];
+                const target = this.board[toRow][toCol];
+
+                // Can't capture own pieces
+                if (target && target.color === piece.color) {
+                    return false;
+                }
+
+                // Basic movement rules for each piece type
+                switch (piece.type) {
+                    case '兵': // Red Soldier
+                        if (fromRow > 4) { // Haven't crossed river
+                            return toCol === fromCol && toRow === fromRow - 1;
+                        } else { // Crossed river
+                            return (Math.abs(toCol - fromCol) + Math.abs(toRow - fromRow) === 1);
+                        }
+                    
+                    case '卒': // Black Soldier
+                        if (fromRow < 5) { // Haven't crossed river
+                            return toCol === fromCol && toRow === fromRow + 1;
+                        } else { // Crossed river
+                            return (Math.abs(toCol - fromCol) + Math.abs(toRow - fromRow) === 1);
+                        }
+
+                    case '車': // Chariot
+                        return this.isPathClear(fromRow, fromCol, toRow, toCol) &&
+                               (fromRow === toRow || fromCol === toCol);
+
+                    case '馬': // Horse
+                        const rowDiff = Math.abs(toRow - fromRow);
+                        const colDiff = Math.abs(toCol - fromCol);
+                        return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+
+                    case '相': case '象': // Elephant
+                        return Math.abs(toRow - fromRow) === 2 && 
+                               Math.abs(toCol - fromCol) === 2 &&
+                               (piece.color === 'red' ? toRow > 4 : toRow < 5);
+
+                    case '仕': case '士': // Advisor
+                        return Math.abs(toRow - fromRow) === 1 && 
+                               Math.abs(toCol - fromCol) === 1 &&
+                               toCol >= 3 && toCol <= 5 &&
+                               (piece.color === 'red' ? toRow >= 7 : toRow <= 2);
+
+                    case '帥': case '將': // General
+                        return Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol) === 1 &&
+                               toCol >= 3 && toCol <= 5 &&
+                               (piece.color === 'red' ? toRow >= 7 : toRow <= 2);
+
+                    case '炮': // Cannon
+                        if (target) {
+                            // Need exactly one piece between for capture
+                            return this.getPiecesBetween(fromRow, fromCol, toRow, toCol) === 1;
+                        } else {
+                            // Need clear path for movement
+                            return this.isPathClear(fromRow, fromCol, toRow, toCol) &&
+                                   (fromRow === toRow || fromCol === toCol);
+                        }
+                }
+
+                return false;
+            }
+
+            isPathClear(fromRow, fromCol, toRow, toCol) {
+                // Check if path is clear for straight line movement
+                if (fromRow === toRow) {
+                    const start = Math.min(fromCol, toCol) + 1;
+                    const end = Math.max(fromCol, toCol);
+                    for (let col = start; col < end; col++) {
+                        if (this.board[fromRow][col]) return false;
+                    }
+                } else if (fromCol === toCol) {
+                    const start = Math.min(fromRow, toRow) + 1;
+                    const end = Math.max(fromRow, toRow);
+                    for (let row = start; row < end; row++) {
+                        if (this.board[row][fromCol]) return false;
+                    }
+                }
+                return true;
+            }
+
+            getPiecesBetween(fromRow, fromCol, toRow, toCol) {
+                let count = 0;
+                if (fromRow === toRow) {
+                    const start = Math.min(fromCol, toCol) + 1;
+                    const end = Math.max(fromCol, toCol);
+                    for (let col = start; col < end; col++) {
+                        if (this.board[fromRow][col]) count++;
+                    }
+                } else if (fromCol === toCol) {
+                    const start = Math.min(fromRow, toRow) + 1;
+                    const end = Math.max(fromRow, toRow);
+                    for (let row = start; row < end; row++) {
+                        if (this.board[row][fromCol]) count++;
+                    }
+                }
+                return count;
+            }
+
+            showValidMoves(row, col) {
+                for (let toRow = 0; toRow < 10; toRow++) {
+                    for (let toCol = 0; toCol < 9; toCol++) {
+                        if (this.isValidMove(row, col, toRow, toCol)) {
+                            const index = toRow * 9 + toCol;
+                            document.querySelectorAll('.cell')[index].classList.add('valid-move');
+                        }
                     }
                 }
             }
         }
 
-        function createPiece(piece, cell) {
-            const pieceElement = document.createElement('div');
-            pieceElement.className = `piece ${piece.toLowerCase() === piece ? 'black' : 'red'}`;
-            pieceElement.textContent = pieces[piece];
-            pieceElement.dataset.piece = piece;
-            cell.appendChild(pieceElement);
-        }
-
-        function handleCellClick(event) {
-            const cell = event.target.closest('.cell');
-            const piece = cell.querySelector('.piece');
-
-            if (selectedPiece) {
-                if (isValidMove(selectedPiece, cell)) {
-                    movePiece(selectedPiece, cell);
-                }
-                selectedPiece.classList.remove('selected');
-                selectedPiece = null;
-            } else if (piece) {
-                selectedPiece = piece;
-                piece.classList.add('selected');
-            }
-        }
-
-        function isValidMove(piece, targetCell) {
-            // Implement Chinese chess rules here
-            // This is a simplified version and doesn't cover all rules
-            const fromRow = parseInt(piece.parentElement.dataset.row);
-            const fromCol = parseInt(piece.parentElement.dataset.col);
-            const toRow = parseInt(targetCell.dataset.row);
-            const toCol = parseInt(targetCell.dataset.col);
-
-            const pieceType = piece.dataset.piece.toLowerCase();
-            const isRed = piece.classList.contains('red');
-
-            switch (pieceType) {
-                case 'p':
-                    if (isRed) {
-                        return toRow === fromRow - 1 && toCol === fromCol;
-                    } else {
-                        return toRow === fromRow + 1 && toCol === fromCol;
-                    }
-                case 'r':
-                    return fromRow === toRow || fromCol === toCol;
-                case 'h':
-                    return (Math.abs(fromRow - toRow) === 2 && Math.abs(fromCol - toCol) === 1) ||
-                           (Math.abs(fromRow - toRow) === 1 && Math.abs(fromCol - toCol) === 2);
-                // Add more rules for other piece types
-            }
-
-            return true; // Allow all moves for now
-        }
-
-        function movePiece(piece, targetCell) {
-            const targetPiece = targetCell.querySelector('.piece');
-            if (targetPiece) {
-                targetCell.removeChild(targetPiece);
-            }
-            targetCell.appendChild(piece);
-        }
-
-        createBoard();
+        // Initialize the game
+        const game = new ChineseChess();
     </script>
 </body>
 </html>
